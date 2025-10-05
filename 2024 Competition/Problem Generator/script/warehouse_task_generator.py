@@ -186,8 +186,8 @@ class WarehouseTaskGenerator:
 
         return traversable
 
-
-    def random_generate(self,taskNum,map_name,task_type_rl=[0.5,0.5], minEPT=1, maxEPT=2):
+    # deadline generation added here
+    def random_generate(self,taskNum,map_name,task_type_rl=[0.5,0.5], minEPT=1, maxEPT=2, minDeadline=30, maxDeadline=60):
         e_locations,s_locations,rows,cols=self.read_maps(map_name)
         tasks=[]
         for i in range(taskNum):
@@ -201,20 +201,21 @@ class WarehouseTaskGenerator:
                 else:
                     task=np.random.choice(s_locations)
                 locs.append(task)
-            tasks.append(locs)
+            deadline = np.random.randint(minDeadline, maxDeadline)
+            tasks.append((locs, deadline))
         return tasks
 
-
+    # modify this function to include deadlines to each task
     def generate_txt(self, tasks:List,file_name:str):
         with open(file_name,"w") as file:
             file.write( "# version for LoRR 2024\n")
             file.write(str(len(tasks))+"\n")
-            for task in tasks:
+            for task, deadline in tasks:
                 for i, loc in enumerate(task):
                     file.write(str(loc))
                     if i!=len(task)-1:
                         file.write(",")
-                file.write("\n")
+                file.write(f";{deadline}\n")
         print("successfully saved as",file_name)
 
     def generate_endpoint_with_distribution(self,s_location, e_locations, f):
@@ -507,6 +508,8 @@ def parse_arguments():
     parser = argparse.ArgumentParser(description='=============League of Robot Runners Warehouse Task Generator version 2024.===========')
     parser.add_argument('--mapFile', help='Map file name', required=True)
     parser.add_argument('--taskNum', type=int, default=10000, help='Number of tasks (>=1)')
+    parser.add_argument('--minDeadline', type=int, default=30, help='Minimum deadline for tasks')
+    parser.add_argument('--maxDeadline', type=int, default=60, help='Maximum deadline for tasks')
     parser.add_argument('--m_buckets',type=int,default=-1,help='Number of buckets for task generation with distribution. By default, m_buckets =-1, and random policy for task generation will be used')
     parser.add_argument('--task_type_rl', nargs='+', type=float, default=[0.5, 0.5],
                         help='Relative likelihood of selecting an "E" or an "S" location. Default value= [0.5,0.5]')
@@ -549,7 +552,7 @@ if __name__=="__main__":
     args=parse_arguments()
     TG=WarehouseTaskGenerator()
     if args.m_buckets==-1:
-        tasks=TG.random_generate(args.taskNum,args.mapFile,args.task_type_rl,args.minEPT,args.maxEPT)
+        tasks=TG.random_generate(args.taskNum,args.mapFile,args.task_type_rl,args.minEPT,args.maxEPT, args.minDeadline, args.maxDeadline) # deadline generation added here
     else:
         # tasks=TG.distribute_generate(args.taskNum,args.mapFile,args.m_buckets,args.minEPT,args.maxEPT)    used in 2023 LoRR
         # tasks=TG.generate_sim_warehouse_tasks(args.taskNum,args.mapFile,args.m_buckets,args.minEPT,args.maxEPT)  used in 2024 LoRR
@@ -566,7 +569,7 @@ if __name__=="__main__":
                     e_biases=args.e_biases,
                     inverse=args.inverse
                     )
-    TG.generate_txt(tasks,args.taskFile)
+    TG.generate_txt(tasks,args.taskFile) # modify this function to include deadlines to each task
     # generate_agents(args.num_agents,args.map,args.agents)
     # generate_problem(args.map,args.agents,args.team_size,args.output,args.tasks_reveal,args.problem)
 
