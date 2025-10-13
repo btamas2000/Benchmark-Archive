@@ -386,7 +386,7 @@ class WarehouseTaskGenerator:
         import matplotlib.pyplot as plt
         import collections
         heatmap=collections.defaultdict(int)
-        for task in tasks:
+        for (task, _) in tasks:
             heatmap[task[1]]+=1
         grid_map, width, height = self.load_grid_map(map_name)
         e_locations,s_locations,rows,cols=self.read_maps(map_name)
@@ -438,7 +438,7 @@ class WarehouseTaskGenerator:
         self.plot_heatmap(map_name, tasks)
         return tasks
     
-    def generate_amazon_warehouse_tasks(self,taskNum,map_name,m_buckets, minEPT=1, maxEPT=2, task_txt="warehouse_large_amazon.tasks",e_biases=None, inverse=False):
+    def generate_amazon_warehouse_tasks(self,taskNum,map_name,m_buckets, minEPT=1, maxEPT=2, task_txt="warehouse_large_amazon.tasks",e_biases=None, inverse=False, minDeadline=30, maxDeadline=60):
         """_summary_
 
         Args:
@@ -450,6 +450,8 @@ class WarehouseTaskGenerator:
             task_txt (str, optional): _description_. Defaults to "warehouse_large_amazon.tasks".
             e_biases (list, optional): _description_. Defaults to None.
             inverse (bool, optional): _description_. Defaults to False.
+            minDeadline (int, optional): _description_. Defaults to 30.
+            maxDeadline (int, optional): _description_. Defaults to 60.
         Returns:
             _type_: new task generation policy
         """
@@ -468,7 +470,8 @@ class WarehouseTaskGenerator:
                 task=self.generate_next_task_amazon_distribution(e_locations, s_locations,last_s_location,rows,cols, m_buckets, i%2, e_biases, inverse=inverse)
                 locs.append(task)
                 last_s_location = task
-            tasks.append(locs)
+            deadline = np.random.randint(minDeadline, maxDeadline)
+            tasks.append((locs, deadline))
         # print("tasks",(np.array(tasks)).shape)
         self.plot_heatmap(map_name, tasks, m_buckets)
         return tasks
@@ -545,6 +548,8 @@ def print_info(args):
     print(f"--e_biases: {args. e_biases} (Description: The list of biases for choosing e locations.)")
     print(f"--inverse: {args.inverse} (Description: If this flag is set, the Inverse Amazon Distribution will be used.)")
     print(f"--mode {args.mode} (Description: The mode of the task generation policy. Choose between year 2023 and 2024.)")
+    print(f"--minDeadline: {args.minDeadline} (Description: Minimum deadline for tasks.)")
+    print(f"--maxDeadline: {args.maxDeadline} (Description: Maximum deadline for tasks.)")
 
 
 
@@ -567,7 +572,9 @@ if __name__=="__main__":
                     minEPT=args.minEPT,
                     maxEPT=args.maxEPT,
                     e_biases=args.e_biases,
-                    inverse=args.inverse
+                    inverse=args.inverse,
+                    minDeadline=args.minDeadline,
+                    maxDeadline=args.maxDeadline
                     )
     TG.generate_txt(tasks,args.taskFile) # modify this function to include deadlines to each task
     # generate_agents(args.num_agents,args.map,args.agents)
